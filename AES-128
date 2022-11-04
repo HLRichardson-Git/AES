@@ -1,9 +1,10 @@
 #include <iostream>
+#include <bitset>
 
 using namespace std;
 
 void RotWord(uint32_t key[][4], int x);
-//oid SubWord(int key[][4], int x);
+//void SubWord(int key[][4], int x);
 
 int main()
 {
@@ -14,14 +15,14 @@ int main()
 
     for (int y = 0; y < 4; y++)
     {
-        cout << key[0][y] << " ";
+        cout << hex <<  key[0][y] << " ";
     }
     cout << endl;
     RotWord(key, 0);
 
     for (int y = 0; y < 4; y++)
     {
-        cout << key[0][y] << " ";
+        cout << hex << key[0][y] << " ";
     }
 
 }
@@ -51,19 +52,35 @@ void RotWord(uint32_t key[][4], int x)
         buffer[2] = (value >> 8) & 0xFF;
         buffer[3] = value & 0xFF;
 
-        cout << buffer[0] << endl;
-
+        //cout << buffer[0] << endl;
+        /*
         uint8_t first = buffer[0];
 
         for (int i = 0; i < 3; i++)
         {
             buffer[i] = buffer[i + 1];
+            cout << hex << buffer[i];
         }
-
         buffer[3] = first;
+        cout << hex << buffer[3] << endl;
 
-        //key[x][y] = buffer[0] + buffer[1] + buffer[2] + buffer[3];
-
+        key[x][y] = buffer[0] + buffer[1] + buffer[2] + buffer[3];
+        //cout << hex << key[x][y] << endl;*/
+        
     }
+
+    /*
+    
+    This is the key! I am a genius!
+
+    */
+    uint32_t value = key[x][0];
+    uint32_t temp = (value << 8);
+    cout << hex << "This : " << temp << endl;
+    temp = (value >> 24);
+    cout << hex << "That : " << temp << endl;
+
+    value = (value << 8) | (value >> 24);
+    cout << hex << value << endl;
 
 }

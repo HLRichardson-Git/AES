@@ -118,6 +118,9 @@ void keySchedule(unsigned char key[4][4], unsigned char roundKey[4][4][11], int 
                 }
             }
         }
+        /*
+            Add debugging here to see each round, need function to print the 2d array in round i
+        */
 
         RotWord(roundKey, round);
         SubWord(roundKey, round);
@@ -159,6 +162,10 @@ void RotWord(unsigned char key[4][4][11], int round)
 
 void SubWord(unsigned char key[4][4][11], int round)
 {
+
+    /*
+        Apply the sBox to each element
+    */
     for(int x = 0; x < 4; x++)
     {
         key[x][3][round] = sBox[key[x][3][round]];
@@ -169,6 +176,9 @@ void SubWord(unsigned char key[4][4][11], int round)
 void Rcon(unsigned char key[4][4][11], int round)
 {
 
+    /*
+        Apply the round constant to first element (0,3)
+    */
     key[0][3][round] = key[0][3][round] ^ RCon[round];
 
 }

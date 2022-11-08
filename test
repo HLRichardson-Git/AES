@@ -1,4 +1,8 @@
 #include <iostream>
+#include <iomanip>
+#include <fstream>
+#include <string>
+
 #include <bitset>
 
 using namespace std;
@@ -25,54 +29,106 @@ unsigned char sBox[256] = {
 
 unsigned char RCon[10] = { 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1B, 0x36 };
 
-void print2dArray(uint8_t array[4][4]);
-void print3dArray(uint8_t array[4][4][11]);
+void print2dArray(unsigned char array[4][4]);
+void print3dArray(unsigned char array[4][4][11]);
 
+/*
+    Generate Key Schedule.
+*/
 void keySchedule(unsigned char key[4][4], unsigned char roundKey[4][4][11], int round);
 
-void RotWord(unsigned char key[4][4][11], int round);
-void SubWord(unsigned char key[4][4][11], int round);
-void Rcon   (unsigned char key[4][4][11], int round);
+void RotWord(unsigned char temp[4], int round);
+void SubWord(unsigned char temp[4], int round);
+void Rcon   (unsigned char temp[4], int round);
+
+/*
+    Encryption round functions.
+*/
+void Encryption(unsigned char roundKey[4][4][11], unsigned char plainText[4][4], int round);
+
+void SubByte    (unsigned char plainText[4][4]);
+void ShiftRows  (unsigned char plainText[4][4]);
+void MixColumns (unsigned char plainText[4][4]);
+void AddRoundKey(unsigned char plainText[4][4]);
 
 int main()
 {
-    //long long int key = 0x614E635266556A586E3272357538782F;
-    //int key[11][16] = {0x61, 0x4E, 0x63, 0x52, 0x66, 0x55, 0x6A, 0x58, 0x6E, 0x32, 0x72, 0x35, 0x75, 0x38, 0x78, 0x2F};
-    //uint32_t key[11][4] = { 0x614E6352, 0x66556A58, 0x6E327235, 0x7538782F };
-    unsigned char key[4][4] = {{0x61, 0x4E, 0x63, 0x52},
+    /*unsigned char key[4][4] = {{0x61, 0x4E, 0x63, 0x52},
                                {0x66, 0x55, 0x6A, 0x58},
                                {0x6E, 0x32, 0x72, 0x35},
-                               {0x75, 0x38, 0x78, 0x2F} };
+                               {0x75, 0x38, 0x78, 0x2F} };*/
+    
+
+    unsigned char key[4][4] = {{0x2b, 0x28, 0xab, 0x09},
+                               {0x7e, 0xae, 0xf7, 0xcf},
+                               {0x15, 0xd2, 0x15, 0x4f},
+                               {0x16, 0xa6, 0x88, 0x3c}};
 
     unsigned char roundKey[4][4][11];
 
     keySchedule(key, roundKey, 0);
     print3dArray(roundKey);
 
+    unsigned char plainText[4][4];
+    string plainTextString = "";
+
+    ifstream inFile("norewegian wood.txt");
+        if (inFile.is_open())
+        {
+            string temp = "";
+            while (getline(inFile, temp))
+            {
+                plainTextString = plainTextString + temp;
+            }
+            inFile.close();
+        }
+    
+    int index = 0;
+    for(int y = 0; y < 4; y++)
+    {
+        for(int x = 0; x < 4; x++)
+        {
+            plainText[x][y] = plainTextString[index];
+            index++;
+        }
+    }
+
+    
+    cout << "After initilizing array:" << endl;
+    print2dArray(plainText);
+
+    SubByte(plainText);
+    cout << "After Sub Byte:" << endl;
+    print2dArray(plainText);
+
+    ShiftRows(plainText);
+    cout << "After shift rows:" << endl;
+    print2dArray(plainText);
     
 }
 
-void print2dArray(uint8_t array[4][4])
+void print2dArray(unsigned char array[4][4])
 {
     for (int x = 0; x < 4; x++)
     {
         for (int y = 0; y < 4; y++)
         {
-            cout << " K:" << x << "," << y << " " << hex << int(array[x][y]) << " |";
+            cout << " K:" << x << "," << y << " " << hex << setfill('0') << setw(2) << int(array[x][y]) << " |";
         }
         cout << endl;
     }
 }
 
-void print3dArray(uint8_t array[4][4][11])
+void print3dArray(unsigned char array[4][4][11])
 {
     for (int z = 0; z < 11; z++)
     {
+        cout << "\n------------------Round: " << z << "------------------" << endl;
         for (int x = 0; x < 4; x++)
         {
             for (int y = 0; y < 4; y++)
             {
-                cout << " K:" << x << "," << y << " " << hex << int(array[x][y][z]) << " |";
+                cout << " K:" << x << "," << y << " " << hex << setfill('0') << setw(2) << int(array[x][y][z]) << " |";
             }
             cout << endl;
         }
@@ -84,7 +140,7 @@ void keySchedule(unsigned char key[4][4], unsigned char roundKey[4][4][11], int 
 {
     round = 0;
 
-    while (round < 1)
+    while (round < 10)
     {
         if (round == 0)
         {
@@ -99,16 +155,32 @@ void keySchedule(unsigned char key[4][4], unsigned char roundKey[4][4][11], int 
         /*
             Add debugging here to see each round, need function to print the 2d array in round i
         */
+        unsigned char temp[4] = {0x00, 0x00, 0x00, 0x00};
 
-        RotWord(roundKey, round);
-        SubWord(roundKey, round);
-        Rcon   (roundKey, round);
+        if (round == 0)
+        {
+            temp[0] = roundKey[0][3][0];
+            temp[1] = roundKey[1][3][0];
+            temp[2] = roundKey[2][3][0];
+            temp[3] = roundKey[3][3][0];     
+        }
+        else
+        {
+            temp[0] = roundKey[0][3][round];
+            temp[1] = roundKey[1][3][round];
+            temp[2] = roundKey[2][3][round];
+            temp[3] = roundKey[3][3][round];
+        }
+
+        RotWord(temp, round);
+        SubWord(temp, round);
+        Rcon   (temp, round);
 
         round++;
-
+       
         for (int x = 0; x < 4; x++)
         {
-            roundKey[x][0][round] = roundKey[x][3][round - 1] ^ roundKey[x][0][round - 1];
+            roundKey[x][0][round] = temp[x] ^ roundKey[x][0][round - 1];
         }
 
         for (int y = 1; y < 4; y++)
@@ -119,24 +191,25 @@ void keySchedule(unsigned char key[4][4], unsigned char roundKey[4][4][11], int 
             }
         }
     }
+    
 }
 
-void RotWord(unsigned char key[4][4][11], int round)
+void RotWord(unsigned char temp[4], int round)
 {
 
     /*
         Apply RotWord function.
     */
-    unsigned char temp = key[0][3][round];
+    unsigned char temp2 = temp[0];
     for (int x = 0; x < 4; x++)
     {
-        key[x][3][round] = key[x + 1][3][round];
+        temp[x] = temp[x + 1];
     }
-    key[3][3][round] = temp;
+    temp[3] = temp2;
 
 }
 
-void SubWord(unsigned char key[4][4][11], int round)
+void SubWord(unsigned char temp[4], int round)
 {
 
     /*
@@ -144,17 +217,68 @@ void SubWord(unsigned char key[4][4][11], int round)
     */
     for (int x = 0; x < 4; x++)
     {
-        key[x][3][round] = sBox[key[x][3][round]];
+        temp[x] = sBox[temp[x]];
     }
 
 }
 
-void Rcon(unsigned char key[4][4][11], int round)
+void Rcon(unsigned char temp[4], int round)
 {
 
     /*
         Apply the round constant to first element (0,3)
     */
-    key[0][3][round] = key[0][3][round] ^ RCon[round];
+    temp[0] = temp[0] ^ RCon[round];
+
+}
+
+/* 
+    ===============================
+    Encryption round functions.
+    ===============================
+*/
+void Encryption(unsigned char roundKey[4][4][11], unsigned char plainText[4][4], int round)
+{
+
+}
+
+void SubByte(unsigned char plainText[4][4])
+{
+
+    for(int y = 0; y < 4; y++)
+    {
+        for(int x = 0; x < 4; x++)
+        {
+            plainText[x][y] = sBox[plainText[x][y]];
+        }
+    }
+
+}
+
+void ShiftRows(unsigned char plainText[4][4])
+{
+
+unsigned char temp;
+int shift = 1;
+    for(int x = 1; x < 4; x++)
+    {
+        temp = plainText[x][0];
+        for(int i = 0; i < 4; i++)
+        {          
+		    plainText[x][i] = plainText[x][(i+shift) % 4];
+        }
+        plainText[x][3] = temp;
+        shift++;
+    }
+
+}
+
+void MixColumns(unsigned char plainText[4][4])
+{
+
+}
+
+void AddRoundKey(unsigned char plainText[4][4])
+{
 
 }

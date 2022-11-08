@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <bitset>
 
 using namespace std;
@@ -23,77 +24,158 @@ unsigned char sBox[256] = {
 0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16
 };
 
-void RotWord(uint32_t key[][4], int x);
-void SubWord(uint32_t key[][4], int x);
+unsigned char RCon[10] = { 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1B, 0x36 };
+
+void print2dArray(unsigned char array[4][4]);
+void print3dArray(unsigned char array[4][4][11]);
+
+void keySchedule(unsigned char key[4][4], unsigned char roundKey[4][4][11], int round);
+
+void RotWord(unsigned char temp[4], int round);
+void SubWord(unsigned char temp[4], int round);
+void Rcon   (unsigned char temp[4], int round);
 
 int main()
 {
-    //long long int key = 0x614E635266556A586E3272357538782F;
-    //int key[11][16] = {0x61, 0x4E, 0x63, 0x52, 0x66, 0x55, 0x6A, 0x58, 0x6E, 0x32, 0x72, 0x35, 0x75, 0x38, 0x78, 0x2F};
-    uint32_t key[11][4] = { 0x614E6352, 0x66556A58, 0x6E327235, 0x7538782F };
+    /*unsigned char key[4][4] = {{0x61, 0x4E, 0x63, 0x52},
+                               {0x66, 0x55, 0x6A, 0x58},
+                               {0x6E, 0x32, 0x72, 0x35},
+                               {0x75, 0x38, 0x78, 0x2F} };*/
+    
 
-    for (int y = 0; y < 4; y++)
-    {
-        cout << hex <<  key[0][y] << " ";
-    }
-    cout << endl;
-    RotWord(key, 0);
-    //SubWord(key, 0);
+    unsigned char key[4][4] = {{0x2b, 0x28, 0xab, 0x09},
+                               {0x7e, 0xae, 0xf7, 0xcf},
+                               {0x15, 0xd2, 0x15, 0x4f},
+                               {0x16, 0xa6, 0x88, 0x3c}};
 
-    for (int y = 0; y < 4; y++)
-    {
-        cout << hex << key[0][y] << " ";
-    }
-    cout << endl;
-    SubWord(key, 0);
+    unsigned char roundKey[4][4][11];
 
-    for (int y = 0; y < 4; y++)
-    {
-        cout << hex << key[0][y] << " ";
-    }
+    keySchedule(key, roundKey, 0);
+    print3dArray(roundKey);
 
+    
 }
 
-void RotWord(uint32_t key[][4], int x)
+void print2dArray(unsigned char array[4][4])
+{
+    for (int x = 0; x < 4; x++)
+    {
+        for (int y = 0; y < 4; y++)
+        {
+            cout << " K:" << x << "," << y << " " << hex << setfill('0') << setw(2) << int(array[x][y]) << " |";
+        }
+        cout << endl;
+    }
+}
+
+void print3dArray(unsigned char array[4][4][11])
+{
+    for (int z = 0; z < 11; z++)
+    {
+        cout << "\n------------------Round: " << z << "------------------" << endl;
+        for (int x = 0; x < 4; x++)
+        {
+            for (int y = 0; y < 4; y++)
+            {
+                cout << " K:" << x << "," << y << " " << hex << setfill('0') << setw(2) << int(array[x][y][z]) << " |";
+            }
+            cout << endl;
+        }
+        cout << "--------------------------------------------" << endl;
+    }
+}
+
+void keySchedule(unsigned char key[4][4], unsigned char roundKey[4][4][11], int round)
+{
+    round = 0;
+
+    while (round < 10)
+    {
+        if (round == 0)
+        {
+            for (int x = 0; x < 4; x++)
+            {
+                for (int y = 0; y < 4; y++)
+                {
+                    roundKey[x][y][0] = key[x][y];
+                }
+            }
+        }
+        /*
+            Add debugging here to see each round, need function to print the 2d array in round i
+        */
+        unsigned char temp[4] = {0x00, 0x00, 0x00, 0x00};
+
+        if (round == 0)
+        {
+            temp[0] = roundKey[0][3][0];
+            temp[1] = roundKey[1][3][0];
+            temp[2] = roundKey[2][3][0];
+            temp[3] = roundKey[3][3][0];     
+        }
+        else
+        {
+            temp[0] = roundKey[0][3][round];
+            temp[1] = roundKey[1][3][round];
+            temp[2] = roundKey[2][3][round];
+            temp[3] = roundKey[3][3][round];
+        }
+
+        RotWord(temp, round);
+        SubWord(temp, round);
+        Rcon   (temp, round);
+
+        round++;
+       
+        for (int x = 0; x < 4; x++)
+        {
+            roundKey[x][0][round] = temp[x] ^ roundKey[x][0][round - 1];
+        }
+
+        for (int y = 1; y < 4; y++)
+        {
+            for (int x = 0; x < 4; x++)
+            {
+                roundKey[x][y][round] = roundKey[x][y][round - 1] ^ roundKey[x][y - 1][round];
+            }
+        }
+    }
+}
+
+void RotWord(unsigned char temp[4], int round)
 {
 
     /*
         Apply RotWord function.
     */
-    for (int y = 0; y < 4; y++)
+    unsigned char temp2 = temp[0];
+    for (int x = 0; x < 4; x++)
     {
-        uint32_t value = key[x][y];
-        uint32_t temp = (value << 8);
-        temp = (value >> 24);
+        temp[x] = temp[x + 1];
+    }
+    temp[3] = temp2;
 
-        value = (value << 8) | (value >> 24);
-        key[x][y] = value;
-        
+}
+
+void SubWord(unsigned char temp[4], int round)
+{
+
+    /*
+        Apply the sBox to each element
+    */
+    for (int x = 0; x < 4; x++)
+    {
+        temp[x] = sBox[temp[x]];
     }
 
 }
 
-void SubWord(uint32_t key[][4], int x)
+void Rcon(unsigned char temp[4], int round)
 {
-    for(int y = 0; y < 4; y++)
-    {
-        uint32_t value = key[x][y];
-        uint32_t buffer[4];
-        buffer[0] = (value >> 24) & 0xFF;
-        buffer[1] = (value >> 16) & 0xFF;
-        buffer[2] = (value >> 8) & 0xFF;
-        buffer[3] = value & 0xFF;
 
-        for (int i = 0; i < 4; i++)
-        {
-            buffer[i] = sBox[buffer[i]];
-        }
-
-        key[x][y] = 0x00000000;
-        key[x][y] = key[x][y] | (buffer[0] << 24);
-        key[x][y] = key[x][y] | (buffer[1] << 16);
-        key[x][y] = key[x][y] | (buffer[2] << 8);
-        key[x][y] = key[x][y] | buffer[3];
-    }
+    /*
+        Apply the round constant to first element (0,3)
+    */
+    temp[0] = temp[0] ^ RCon[round];
 
 }

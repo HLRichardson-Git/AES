@@ -29,6 +29,9 @@ unsigned char sBox[256] = {
 
 unsigned char RCon[10] = { 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1B, 0x36 };
 
+/*
+    General Functions
+*/
 void print2dArray(unsigned char array[4][4]);
 void print3dArray(unsigned char array[4][4][11]);
 
@@ -72,7 +75,7 @@ int main()
     unsigned char plainText[4][4];
     string plainTextString = "";
 
-    ifstream inFile("norewegian wood.txt");
+    ifstream inFile("norwegianwood.txt");
         if (inFile.is_open())
         {
             string temp = "";
@@ -81,6 +84,11 @@ int main()
                 plainTextString = plainTextString + temp;
             }
             inFile.close();
+        }
+        else
+        {
+            cout << "Could not open file.\n\n CLOSING PROGRAM" << endl;
+            return 0;
         }
     
     int index = 0;
@@ -92,8 +100,7 @@ int main()
             index++;
         }
     }
-
-    
+        
     cout << "After initilizing array:" << endl;
     print2dArray(plainText);
 
@@ -103,6 +110,10 @@ int main()
 
     ShiftRows(plainText);
     cout << "After shift rows:" << endl;
+    print2dArray(plainText);
+
+    MixColumns(plainText);
+    cout << "After mix columns:" << endl;
     print2dArray(plainText);
     
 }
@@ -258,23 +269,72 @@ void SubByte(unsigned char plainText[4][4])
 void ShiftRows(unsigned char plainText[4][4])
 {
 
-unsigned char temp;
-int shift = 1;
+    //unsigned char temp[];
+    int shift = 1;
+
     for(int x = 1; x < 4; x++)
     {
-        temp = plainText[x][0];
-        for(int i = 0; i < 4; i++)
-        {          
-		    plainText[x][i] = plainText[x][(i+shift) % 4];
+        /* storing 1st D elements in temporary array */
+        unsigned char temp[shift];
+        for (int y = 0; y < shift; y++)
+        {
+            temp[y] = plainText[x][y];
         }
-        plainText[x][3] = temp;
+        
+        /* shifting remaining elements of the array */
+        int n=0;
+        for(int j=shift;j<4;j++)
+        {
+            plainText[x][n]=plainText[x][j];
+            n++;
+        }
+        
+        /* storing back the D elements to the orignal array */
+        n=0;
+        for (int k=4-shift;k<4;k++)
+        {
+            plainText[x][k]=temp[n];
+            n++;
+        }
         shift++;
     }
-
 }
 
 void MixColumns(unsigned char plainText[4][4])
 {
+
+    unsigned char temp[4] = {0,0,0,0};
+    int rijndaelMatric[4][4] = {{2,3,1,1},
+                                {1,2,3,1},
+                                {1,1,2,3},
+                                {3,1,1,2}};
+
+    for(int y = 0; y < 4; y++)
+    {
+        for(int x = 0; x < 4; x++)
+        {
+            unsigned char constant = 0x00;
+            switch(rijndaelMatric[y][x])
+            {
+                case 1:
+                    break;  
+                case 2:
+                    // Check if highest bit is 1.
+                    if(plainText[x][y] & 0x80 == 0x80)
+                        constant = 0x1B;
+
+                    temp[x] = (plainText[x][y] << 1) ^ constant;
+                case 3:
+                    // Check if highest bit is 1.
+                    if(plainText[x][y] & 0x80 == 0x80)
+                        constant = 0x1B;
+                    
+                    temp[x] = ((plainText[x][y] << 1) ^ constant) ^ plainText[x][y];
+            }
+
+
+        }
+    }
 
 }
 

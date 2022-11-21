@@ -1,5 +1,8 @@
 #include <iostream>
 #include <iomanip>
+#include <fstream>
+#include <string>
+
 #include <bitset>
 
 using namespace std;
@@ -26,14 +29,30 @@ unsigned char sBox[256] = {
 
 unsigned char RCon[10] = { 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1B, 0x36 };
 
+/*
+    General Functions
+*/
 void print2dArray(unsigned char array[4][4]);
 void print3dArray(unsigned char array[4][4][11]);
 
+/*
+    Generate Key Schedule.
+*/
 void keySchedule(unsigned char key[4][4], unsigned char roundKey[4][4][11], int round);
 
 void RotWord(unsigned char temp[4], int round);
 void SubWord(unsigned char temp[4], int round);
-void Rcon   (unsigned char temp[4], int round);
+void Rcon(unsigned char temp[4], int round);
+
+/*
+    Encryption round functions.
+*/
+void Encryption(unsigned char roundKey[4][4][11], unsigned char plainText[4][4], int round);
+
+void SubByte(unsigned char plainText[4][4]);
+void ShiftRows(unsigned char plainText[4][4]);
+void MixColumns(unsigned char plainText[4][4]);
+void AddRoundKey(unsigned char plainText[4][4]);
 
 int main()
 {
@@ -41,19 +60,64 @@ int main()
                                {0x66, 0x55, 0x6A, 0x58},
                                {0x6E, 0x32, 0x72, 0x35},
                                {0x75, 0x38, 0x78, 0x2F} };*/
-    
 
-    unsigned char key[4][4] = {{0x2b, 0x28, 0xab, 0x09},
+
+    unsigned char key[4][4] = { {0x2b, 0x28, 0xab, 0x09},
                                {0x7e, 0xae, 0xf7, 0xcf},
                                {0x15, 0xd2, 0x15, 0x4f},
-                               {0x16, 0xa6, 0x88, 0x3c}};
+                               {0x16, 0xa6, 0x88, 0x3c} };
 
     unsigned char roundKey[4][4][11];
 
     keySchedule(key, roundKey, 0);
     print3dArray(roundKey);
 
-    
+    unsigned char plainText[4][4];
+    string plainTextString = "";
+
+    ifstream inFile("input.txt");
+    if (inFile.is_open())
+    {
+        string temp = "";
+        while (getline(inFile, temp))
+        {
+            plainTextString = plainTextString + temp;
+        }
+        inFile.close();
+    }
+    else
+    {
+        cout << "Could not open file.\n\n CLOSING PROGRAM" << endl;
+        return 0;
+    }
+
+    int index = 0;
+    for (int y = 0; y < 4; y++)
+    {
+        for (int x = 0; x < 4; x++)
+        {
+            plainText[x][y] = plainTextString[index];
+            index++;
+        }
+    }
+
+    cout << "After initilizing array:" << endl;
+    print2dArray(plainText);
+
+    SubByte(plainText);
+    cout << "After Sub Byte:" << endl;
+    print2dArray(plainText);
+
+    ShiftRows(plainText);
+    cout << "After shift rows:" << endl;
+    print2dArray(plainText);
+
+    MixColumns(plainText);
+    cout << "After mix columns:" << endl;
+    print2dArray(plainText);
+
+    unsigned char ans = 0xa6 ^ 0xd7 ^ 0x85 ^ 0x3c;
+
 }
 
 void print2dArray(unsigned char array[4][4])
@@ -104,14 +168,14 @@ void keySchedule(unsigned char key[4][4], unsigned char roundKey[4][4][11], int 
         /*
             Add debugging here to see each round, need function to print the 2d array in round i
         */
-        unsigned char temp[4] = {0x00, 0x00, 0x00, 0x00};
+        unsigned char temp[4] = { 0x00, 0x00, 0x00, 0x00 };
 
         if (round == 0)
         {
             temp[0] = roundKey[0][3][0];
             temp[1] = roundKey[1][3][0];
             temp[2] = roundKey[2][3][0];
-            temp[3] = roundKey[3][3][0];     
+            temp[3] = roundKey[3][3][0];
         }
         else
         {
@@ -123,10 +187,10 @@ void keySchedule(unsigned char key[4][4], unsigned char roundKey[4][4][11], int 
 
         RotWord(temp, round);
         SubWord(temp, round);
-        Rcon   (temp, round);
+        Rcon(temp, round);
 
         round++;
-       
+
         for (int x = 0; x < 4; x++)
         {
             roundKey[x][0][round] = temp[x] ^ roundKey[x][0][round - 1];
@@ -140,6 +204,7 @@ void keySchedule(unsigned char key[4][4], unsigned char roundKey[4][4][11], int 
             }
         }
     }
+
 }
 
 void RotWord(unsigned char temp[4], int round)
@@ -177,5 +242,131 @@ void Rcon(unsigned char temp[4], int round)
         Apply the round constant to first element (0,3)
     */
     temp[0] = temp[0] ^ RCon[round];
+
+}
+
+/*
+    ===============================
+    Encryption round functions.
+    ===============================
+*/
+void Encryption(unsigned char roundKey[4][4][11], unsigned char plainText[4][4], int round)
+{
+
+}
+
+void SubByte(unsigned char plainText[4][4])
+{
+
+    for (int y = 0; y < 4; y++)
+    {
+        for (int x = 0; x < 4; x++)
+        {
+            plainText[x][y] = sBox[plainText[x][y]];
+        }
+    }
+
+}
+
+void ShiftRows(unsigned char plainText[4][4])
+{
+
+    //unsigned char temp[];
+    int shift = 1;
+
+    for (int x = 1; x < 4; x++)
+    {
+        /* storing 1st D elements in temporary array */
+        unsigned char temp[4];
+        for (int y = 0; y < shift; y++)
+        {
+            temp[y] = plainText[x][y];
+        }
+
+        /* shifting remaining elements of the array */
+        int n = 0;
+        for (int j = shift; j < 4; j++)
+        {
+            plainText[x][n] = plainText[x][j];
+            n++;
+        }
+
+        /* storing back the D elements to the orignal array */
+        n = 0;
+        for (int k = 4 - shift; k < 4; k++)
+        {
+            plainText[x][k] = temp[n];
+            n++;
+        }
+        shift++;
+    }
+}
+
+void MixColumns(unsigned char plainText[4][4])
+{
+    unsigned char temp[4] = { 0x00,0x00,0x00,0x00 };
+    
+    unsigned char newState[4][4] = { {0,0,0,0},
+                                     {0,0,0,0},
+                                     {0,0,0,0},
+                                     {0,0,0,0} };
+
+    int rijndaelMatric[4][4] = { {2,3,1,1},
+                                 {1,2,3,1},
+                                 {1,1,2,3},
+                                 {3,1,1,2} };
+
+    for (int y = 0; y < 4; y++)
+    {
+        int z = 0;
+        for (int i = 0; i < 4; i++)
+        {
+            temp[i] = 0x00;
+        }
+        for (int x = 0; x < 4; x++)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                unsigned char constant = 0x00;
+                switch (rijndaelMatric[z][j])
+                {
+                case 1:
+                    temp[j] = plainText[j][y];
+                    break;
+                case 2:
+                    // Check if highest bit is 1.
+                    if ((plainText[j][y] & 0x80) == 0x80)
+                        constant = 0x1B;
+
+                    temp[j] = (plainText[j][y] << 1) ^ constant;
+                    break;
+                case 3:
+                    // Check if highest bit is 1.
+                    if ((plainText[j][y] & 0x80) == 0x80)
+                        constant = 0x1B;
+
+                    temp[j] = ((plainText[j][y] << 1) ^ constant) ^ plainText[j][y];
+                    break;
+                }
+
+            }
+            newState[x][y] = int(temp[0]) ^ int(temp[1]) ^ int(temp[2]) ^ int(temp[3]);
+            z++;
+        }
+        
+    }
+
+    for (int x = 0; x < 4; x++)
+    {
+        for (int y = 0; y < 4; y++)
+        {
+            plainText[x][y] = newState[x][y];
+        }
+    }
+
+}
+
+void AddRoundKey(unsigned char plainText[4][4])
+{
 
 }

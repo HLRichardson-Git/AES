@@ -38,7 +38,7 @@ void print3dArray(unsigned char array[4][4][11]);
 /*
     Generate Key Schedule.
 */
-void keySchedule(unsigned char key[4][4], unsigned char roundKey[4][4][11], int round);
+void keySchedule(unsigned char key[4][4], unsigned char roundKey[4][4][11]);
 
 void RotWord(unsigned char temp[4], int round);
 void SubWord(unsigned char temp[4], int round);
@@ -47,12 +47,12 @@ void Rcon(unsigned char temp[4], int round);
 /*
     Encryption round functions.
 */
-void Encryption(unsigned char roundKey[4][4][11], unsigned char plainText[4][4], int round);
+void Encryption(unsigned char roundKey[4][4][11], unsigned char plainText[4][4]);
 
 void SubByte(unsigned char plainText[4][4]);
 void ShiftRows(unsigned char plainText[4][4]);
 void MixColumns(unsigned char plainText[4][4]);
-void AddRoundKey(unsigned char plainText[4][4]);
+void AddRoundKey(unsigned char plainText[4][4], unsigned char roundKey[4][4][11], int round);
 
 int main()
 {
@@ -63,13 +63,13 @@ int main()
 
 
     unsigned char key[4][4] = { {0x2b, 0x28, 0xab, 0x09},
-                               {0x7e, 0xae, 0xf7, 0xcf},
-                               {0x15, 0xd2, 0x15, 0x4f},
-                               {0x16, 0xa6, 0x88, 0x3c} };
+                                {0x7e, 0xae, 0xf7, 0xcf},
+                                {0x15, 0xd2, 0x15, 0x4f},
+                                {0x16, 0xa6, 0x88, 0x3c} };
 
     unsigned char roundKey[4][4][11];
 
-    keySchedule(key, roundKey, 0);
+    keySchedule(key, roundKey);
     print3dArray(roundKey);
 
     unsigned char plainText[4][4];
@@ -100,23 +100,41 @@ int main()
             index++;
         }
     }
-
+    
     cout << "After initilizing array:" << endl;
     print2dArray(plainText);
+    /*
+    for (int x = 0; x < 4; x++)
+    {
+        for (int y = 0; y < 4; y++)
+        {
+            plainText[x][y] = plainText[x][y] ^ roundKey[x][y][0];
+        }
+    }
+    int i = 1;
+    while (i < 11) {
+        SubByte(plainText);
+        cout << "After Sub Byte:" << endl;
+        print2dArray(plainText);
 
-    SubByte(plainText);
-    cout << "After Sub Byte:" << endl;
+        ShiftRows(plainText);
+        cout << "After shift rows:" << endl;
+        print2dArray(plainText);
+
+        MixColumns(plainText);
+        cout << "After mix columns:" << endl;
+        print2dArray(plainText);
+
+        AddRoundKey(plainText, roundKey, i);
+        cout << "After mix columns:" << endl;
+        print2dArray(plainText);
+        i++;
+    }*/
+
+    Encryption(roundKey, plainText);
+    cout << "After encryption function:" << endl;
     print2dArray(plainText);
 
-    ShiftRows(plainText);
-    cout << "After shift rows:" << endl;
-    print2dArray(plainText);
-
-    MixColumns(plainText);
-    cout << "After mix columns:" << endl;
-    print2dArray(plainText);
-
-    unsigned char ans = 0xa6 ^ 0xd7 ^ 0x85 ^ 0x3c;
 
 }
 
@@ -149,9 +167,9 @@ void print3dArray(unsigned char array[4][4][11])
     }
 }
 
-void keySchedule(unsigned char key[4][4], unsigned char roundKey[4][4][11], int round)
+void keySchedule(unsigned char key[4][4], unsigned char roundKey[4][4][11])
 {
-    round = 0;
+    int round = 0;
 
     while (round < 10)
     {
@@ -250,8 +268,31 @@ void Rcon(unsigned char temp[4], int round)
     Encryption round functions.
     ===============================
 */
-void Encryption(unsigned char roundKey[4][4][11], unsigned char plainText[4][4], int round)
+void Encryption(unsigned char roundKey[4][4][11], unsigned char plainText[4][4])
 {
+
+    int round = 0;
+
+    for (int x = 0; x < 4; x++)
+    {
+        for (int y = 0; y < 4; y++)
+        {
+            plainText[x][y] = plainText[x][y] ^ roundKey[x][y][0];
+        }
+    }
+
+    round++;
+
+    while(round < 11)
+    {
+
+        SubByte(plainText);
+        ShiftRows(plainText);
+        MixColumns(plainText);
+        AddRoundKey(plainText, roundKey, round);
+        round++;
+
+    }
 
 }
 
@@ -366,7 +407,15 @@ void MixColumns(unsigned char plainText[4][4])
 
 }
 
-void AddRoundKey(unsigned char plainText[4][4])
+void AddRoundKey(unsigned char plainText[4][4], unsigned char roundKey[4][4][11], int round)
 {
+
+    for (int x = 0; x < 4; x++)
+    {
+        for (int y = 0; y < 4; y++)
+        {
+            plainText[x][y] = plainText[x][y] ^ roundKey[x][y][round];
+        }
+    }
 
 }

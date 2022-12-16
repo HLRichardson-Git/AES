@@ -56,16 +56,14 @@ void AddRoundKey(unsigned char plainText[4][4], unsigned char roundKey[4][4][11]
 
 int main()
 {
-    /*unsigned char key[4][4] = {{0x61, 0x4E, 0x63, 0x52},
-                               {0x66, 0x55, 0x6A, 0x58},
-                               {0x6E, 0x32, 0x72, 0x35},
-                               {0x75, 0x38, 0x78, 0x2F} };*/
-
-
-    /*unsigned char key[4][4] = {{0x2b, 0x28, 0xab, 0x09},
+    /*
+    unsigned char key[4][4] = {{0x2b, 0x28, 0xab, 0x09},
                                 {0x7e, 0xae, 0xf7, 0xcf},
                                 {0x15, 0xd2, 0x15, 0x4f},
-                                {0x16, 0xa6, 0x88, 0x3c} };*/
+                                {0x16, 0xa6, 0x88, 0x3c} };
+    */
+
+    // Test value key by NIST
     unsigned char key[4][4] = { {0x10, 0xd7, 0x74, 0xfb},
                                 {0xa5, 0x4b, 0xcf, 0x47},
                                 {0x88, 0xe5, 0x86, 0x38},
@@ -109,33 +107,7 @@ int main()
     
     cout << "After initilizing array:" << endl;
     print2dArray(plainText);
-    /*
-    for (int x = 0; x < 4; x++)
-    {
-        for (int y = 0; y < 4; y++)
-        {
-            plainText[x][y] = plainText[x][y] ^ roundKey[x][y][0];
-        }
-    }
-    int i = 1;
-    while (i < 11) {
-        SubByte(plainText);
-        cout << "After Sub Byte:" << endl;
-        print2dArray(plainText);
-
-        ShiftRows(plainText);
-        cout << "After shift rows:" << endl;
-        print2dArray(plainText);
-
-        MixColumns(plainText);
-        cout << "After mix columns:" << endl;
-        print2dArray(plainText);
-
-        AddRoundKey(plainText, roundKey, i);
-        cout << "After mix columns:" << endl;
-        print2dArray(plainText);
-        i++;
-    }*/
+    
 
     Encryption(roundKey, plainText);
     cout << "After encryption function:" << endl;

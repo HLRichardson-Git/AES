@@ -62,10 +62,14 @@ int main()
                                {0x75, 0x38, 0x78, 0x2F} };*/
 
 
-    unsigned char key[4][4] = { {0x2b, 0x28, 0xab, 0x09},
+    /*unsigned char key[4][4] = {{0x2b, 0x28, 0xab, 0x09},
                                 {0x7e, 0xae, 0xf7, 0xcf},
                                 {0x15, 0xd2, 0x15, 0x4f},
-                                {0x16, 0xa6, 0x88, 0x3c} };
+                                {0x16, 0xa6, 0x88, 0x3c} };*/
+    unsigned char key[4][4] = { {0x10, 0xd7, 0x74, 0xfb},
+                                {0xa5, 0x4b, 0xcf, 0x47},
+                                {0x88, 0xe5, 0x86, 0x38},
+                                {0x69, 0xa3, 0x7c, 0x59} };
 
     unsigned char roundKey[4][4][11];
 
@@ -96,10 +100,12 @@ int main()
     {
         for (int x = 0; x < 4; x++)
         {
-            plainText[x][y] = plainTextString[index];
+            //plainText[x][y] = plainTextString[index];
+            plainText[x][y] = 0x00;
             index++;
         }
     }
+    
     
     cout << "After initilizing array:" << endl;
     print2dArray(plainText);
@@ -283,16 +289,27 @@ void Encryption(unsigned char roundKey[4][4][11], unsigned char plainText[4][4])
 
     round++;
 
-    while(round < 11)
+    while(round < 10)
     {
 
         SubByte(plainText);
         ShiftRows(plainText);
         MixColumns(plainText);
         AddRoundKey(plainText, roundKey, round);
+
+        /*
+        cout << "\n------------------Round: " << round << "------------------" << endl;
+        print2dArray(plainText);
+        cout << "--------------------------------------------" << endl;
+        */
+
         round++;
 
     }
+
+    SubByte(plainText);
+    ShiftRows(plainText);
+    AddRoundKey(plainText, roundKey, round);
 
 }
 

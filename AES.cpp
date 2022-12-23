@@ -1,3 +1,8 @@
+// TODO:
+// - Finish AES decryption
+// - Write comments
+// - Organize into different cpp/ h files
+
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -32,6 +37,7 @@ unsigned char RCon[10] = { 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1B,
 /*
     General Functions
 */
+void printResults(unsigned char array[4][4]);
 void print2dArray(unsigned char array[4][4]);
 void print3dArray(unsigned char array[4][4][11]);
 
@@ -47,12 +53,22 @@ void Rcon(unsigned char temp[4], int round);
 /*
     Encryption round functions.
 */
-void Encryption(unsigned char roundKey[4][4][11], unsigned char plainText[4][4]);
+void Encryption(unsigned char roundKey[4][4][11], unsigned char plainText[4][4], unsigned char cipherText[4][4]);
 
-void SubByte(unsigned char plainText[4][4]);
-void ShiftRows(unsigned char plainText[4][4]);
-void MixColumns(unsigned char plainText[4][4]);
-void AddRoundKey(unsigned char plainText[4][4], unsigned char roundKey[4][4][11], int round);
+void SubByte(unsigned char cipherText[4][4]);
+void ShiftRows(unsigned char cipherText[4][4]);
+void MixColumns(unsigned char cipherText[4][4]);
+void AddRoundKey(unsigned char cipherText[4][4], unsigned char roundKey[4][4][11], int round);
+
+/*
+    Decryption round functions.
+*/
+void Decryption(unsigned char roundKey[4][4][11], unsigned char cipherText[4][4], unsigned char plainText[4][4]);
+
+void InvSubByte(unsigned char plainText[4][4]);
+void InvShiftRows(unsigned char plainText[4][4]);
+void InvMixColumns(unsigned char plainText[4][4]);
+void InvAddRoundKey(unsigned char plainText[4][4], unsigned char roundKey[4][4][11], int round);
 
 int main()
 {
@@ -71,10 +87,16 @@ int main()
 
     unsigned char roundKey[4][4][11];
 
+    unsigned char IV[4][4] = {  {0x00, 0x00, 0x00, 0x00},
+                                {0x00, 0x00, 0x00, 0x00},
+                                {0x00, 0x00, 0x00, 0x00},
+                                {0x00, 0x00, 0x00, 0x00} };
+
     keySchedule(key, roundKey);
     print3dArray(roundKey);
 
     unsigned char plainText[4][4];
+    unsigned char cipherText[4][4];
     string plainTextString = "";
 
     ifstream inFile("input.txt");
@@ -98,8 +120,8 @@ int main()
     {
         for (int x = 0; x < 4; x++)
         {
-            //plainText[x][y] = plainTextString[index];
-            plainText[x][y] = 0x00;
+            //plainText[x][y] = plainTextString[index] ^ IV[x][y];
+            plainText[x][y] = 0x00 ^ IV[x][y];
             index++;
         }
     }
@@ -109,11 +131,30 @@ int main()
     print2dArray(plainText);
     
 
-    Encryption(roundKey, plainText);
+    Encryption(roundKey, plainText, cipherText);
     cout << "After encryption function:" << endl;
+    print2dArray(cipherText);
+
+    Decryption(roundKey, cipherText, plainText);
+    cout << "After dencryption function:" << endl;
     print2dArray(plainText);
 
+    cout << "\nPlaintext: " << plainTextString.substr(0, 16) << endl;
+    cout << "Ciphertext: "; printResults(cipherText); cout << endl;
+    cout << "Decrypted ciphertext: "; printResults(plainText);
 
+
+}
+
+void printResults(unsigned char array[4][4])
+{
+    for (int x = 0; x < 4; x++)
+    {
+        for (int y = 0; y < 4; y++)
+        {
+            cout <<  int(array[y][x]);
+        }
+    }
 }
 
 void print2dArray(unsigned char array[4][4])
@@ -246,7 +287,7 @@ void Rcon(unsigned char temp[4], int round)
     Encryption round functions.
     ===============================
 */
-void Encryption(unsigned char roundKey[4][4][11], unsigned char plainText[4][4])
+void Encryption(unsigned char roundKey[4][4][11], unsigned char plainText[4][4], unsigned char cipherText[4][4])
 {
 
     int round = 0;
@@ -255,7 +296,7 @@ void Encryption(unsigned char roundKey[4][4][11], unsigned char plainText[4][4])
     {
         for (int y = 0; y < 4; y++)
         {
-            plainText[x][y] = plainText[x][y] ^ roundKey[x][y][0];
+            cipherText[x][y] = plainText[x][y] ^ roundKey[x][y][0];
         }
     }
 
@@ -263,42 +304,33 @@ void Encryption(unsigned char roundKey[4][4][11], unsigned char plainText[4][4])
 
     while(round < 10)
     {
-
-        SubByte(plainText);
-        ShiftRows(plainText);
-        MixColumns(plainText);
-        AddRoundKey(plainText, roundKey, round);
-
-        /*
-        cout << "\n------------------Round: " << round << "------------------" << endl;
-        print2dArray(plainText);
-        cout << "--------------------------------------------" << endl;
-        */
-
+        SubByte(cipherText);
+        ShiftRows(cipherText);
+        MixColumns(cipherText);
+        AddRoundKey(cipherText, roundKey, round);
         round++;
-
     }
 
-    SubByte(plainText);
-    ShiftRows(plainText);
-    AddRoundKey(plainText, roundKey, round);
+    SubByte(cipherText);
+    ShiftRows(cipherText);
+    AddRoundKey(cipherText, roundKey, round);
 
 }
 
-void SubByte(unsigned char plainText[4][4])
+void SubByte(unsigned char cipherText[4][4])
 {
 
     for (int y = 0; y < 4; y++)
     {
         for (int x = 0; x < 4; x++)
         {
-            plainText[x][y] = sBox[plainText[x][y]];
+            cipherText[x][y] = sBox[cipherText[x][y]];
         }
     }
 
 }
 
-void ShiftRows(unsigned char plainText[4][4])
+void ShiftRows(unsigned char cipherText[4][4])
 {
 
     //unsigned char temp[];
@@ -310,14 +342,14 @@ void ShiftRows(unsigned char plainText[4][4])
         unsigned char temp[4];
         for (int y = 0; y < shift; y++)
         {
-            temp[y] = plainText[x][y];
+            temp[y] = cipherText[x][y];
         }
 
         /* shifting remaining elements of the array */
         int n = 0;
         for (int j = shift; j < 4; j++)
         {
-            plainText[x][n] = plainText[x][j];
+            cipherText[x][n] = cipherText[x][j];
             n++;
         }
 
@@ -325,14 +357,14 @@ void ShiftRows(unsigned char plainText[4][4])
         n = 0;
         for (int k = 4 - shift; k < 4; k++)
         {
-            plainText[x][k] = temp[n];
+            cipherText[x][k] = temp[n];
             n++;
         }
         shift++;
     }
 }
 
-void MixColumns(unsigned char plainText[4][4])
+void MixColumns(unsigned char cipherText[4][4])
 {
     unsigned char temp[4] = { 0x00,0x00,0x00,0x00 };
     
@@ -361,21 +393,21 @@ void MixColumns(unsigned char plainText[4][4])
                 switch (rijndaelMatric[z][j])
                 {
                 case 1:
-                    temp[j] = plainText[j][y];
+                    temp[j] = cipherText[j][y];
                     break;
                 case 2:
                     // Check if highest bit is 1.
-                    if ((plainText[j][y] & 0x80) == 0x80)
+                    if ((cipherText[j][y] & 0x80) == 0x80)
                         constant = 0x1B;
 
-                    temp[j] = (plainText[j][y] << 1) ^ constant;
+                    temp[j] = (cipherText[j][y] << 1) ^ constant;
                     break;
                 case 3:
                     // Check if highest bit is 1.
-                    if ((plainText[j][y] & 0x80) == 0x80)
+                    if ((cipherText[j][y] & 0x80) == 0x80)
                         constant = 0x1B;
 
-                    temp[j] = ((plainText[j][y] << 1) ^ constant) ^ plainText[j][y];
+                    temp[j] = ((cipherText[j][y] << 1) ^ constant) ^ cipherText[j][y];
                     break;
                 }
 
@@ -390,13 +422,184 @@ void MixColumns(unsigned char plainText[4][4])
     {
         for (int y = 0; y < 4; y++)
         {
+            cipherText[x][y] = newState[x][y];
+        }
+    }
+
+}
+
+void AddRoundKey(unsigned char cipherText[4][4], unsigned char roundKey[4][4][11], int round)
+{
+
+    for (int x = 0; x < 4; x++)
+    {
+        for (int y = 0; y < 4; y++)
+        {
+            cipherText[x][y] = cipherText[x][y] ^ roundKey[x][y][round];
+        }
+    }
+
+}
+
+
+/*
+    ===============================
+    Decryption round functions.
+    ===============================
+*/
+
+void Decryption(unsigned char roundKey[4][4][11], unsigned char cipherText[4][4], unsigned char plainText[4][4])
+{
+    int round = 10;
+
+    for (int x = 0; x < 4; x++)
+    {
+        for (int y = 0; y < 4; y++)
+        {
+            plainText[x][y] = cipherText[x][y];
+        }
+    }
+
+    InvAddRoundKey(plainText, roundKey, round);
+    InvShiftRows(plainText);
+    InvSubByte(plainText);
+    
+    round--;
+
+    while (round > 0)
+    {
+
+        InvAddRoundKey(plainText, roundKey, round);
+        InvMixColumns(plainText);
+        InvShiftRows(plainText);
+        InvSubByte(plainText);
+
+        round--;
+
+    }
+
+
+}
+
+void InvSubByte(unsigned char plainText[4][4])
+{
+
+    for (int y = 0; y < 4; y++)
+    {
+        for (int x = 0; x < 4; x++)
+        {
+            plainText[x][y] = sBox[plainText[x][y]];
+        }
+    }
+
+}
+
+void InvShiftRows(unsigned char plainText[4][4])
+{
+
+    int shift = 1;
+
+    for (int x = 1; x < 4; x++)
+    {
+        int index = 1;
+
+        while (index <= shift)
+        {
+            unsigned char last = plainText[x][3];
+
+            for (int y = 3; y > 0; y--)
+                plainText[x][y] = plainText[x][y - 1];
+
+            index++;
+            plainText[x][0] = last;
+        }
+
+        shift++;
+
+    }
+
+
+}
+
+void InvMixColumns(unsigned char plainText[4][4])
+{
+
+    unsigned char temp[4] = { 0x00,0x00,0x00,0x00 };
+
+    unsigned char newState[4][4] = { {0,0,0,0},
+                                     {0,0,0,0},
+                                     {0,0,0,0},
+                                     {0,0,0,0} };
+
+    int rijndaelMatric[4][4] = { {14,11,13,9},
+                                 {9,14,11,13},
+                                 {13,9,14,11},
+                                 {11,13,9,14} };
+
+    for (int y = 0; y < 4; y++)
+    {
+        int z = 0;
+        for (int i = 0; i < 4; i++)
+        {
+            temp[i] = 0x00;
+        }
+        for (int x = 0; x < 4; x++)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                unsigned char constant = 0x00;
+                switch (rijndaelMatric[z][j])
+                {
+                case 9:
+                    // Check if highest bit is 1.
+                    if ((plainText[j][y] & 0x80) == 0x80)
+                        constant = 0x1B;
+
+                    temp[j] = ((((((plainText[j][y] << 1) ^ constant) << 1) ^ constant) << 1) ^ constant) ^ plainText[j][y];
+                    break;
+                case 11:
+                    // Check if highest bit is 1.
+                    if ((plainText[j][y] & 0x80) == 0x80)
+                        constant = 0x1B;
+
+                    temp[j] = (((((((plainText[j][y] << 1) ^ constant) << 1) ^ constant) ^ plainText[j][y]) << 1) ^ constant) ^ plainText[j][y];
+                    break;
+                case 13:
+                    // Check if highest bit is 1.
+                    if ((plainText[j][y] & 0x80) == 0x80)
+                        constant = 0x1B;
+
+                    temp[j] = (((((((plainText[j][y] << 1) ^ constant) ^ plainText[j][y]) << 1) ^ constant) << 1) ^ constant) ^ plainText[j][y];
+                    break;
+                case 14:
+                    // Check if highest bit is 1.
+                    if ((plainText[j][y] & 0x80) == 0x80)
+                        constant = 0x1B;
+
+                    temp[j] = (((((((plainText[j][y] << 1) ^ constant) ^ plainText[j][y]) << 1) ^ constant) ^ plainText[j][y]) << 1) ^ constant;
+                    break;
+                }
+
+            }
+            newState[x][y] = int(temp[0]) ^ int(temp[1]) ^ int(temp[2]) ^ int(temp[3]);
+            z++;
+        }
+
+    }
+
+    for (int x = 0; x < 4; x++)
+    {
+        for (int y = 0; y < 4; y++)
+        {
             plainText[x][y] = newState[x][y];
         }
     }
 
 }
 
-void AddRoundKey(unsigned char plainText[4][4], unsigned char roundKey[4][4][11], int round)
+
+
+void InvAddRoundKey(unsigned char plainText[4][4], unsigned char roundKey[4][4][11], int round)
 {
 
     for (int x = 0; x < 4; x++)

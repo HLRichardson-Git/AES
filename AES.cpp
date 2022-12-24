@@ -1,5 +1,4 @@
 // TODO:
-// - Finish AES decryption
 // - Write comments
 // - Organize into different cpp/ h files
 
@@ -59,6 +58,8 @@ unsigned char RCon[10] = { 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1B,
 void printResults(unsigned char array[4][4]);
 void print2dArray(unsigned char array[4][4]);
 void print3dArray(unsigned char array[4][4][11]);
+
+unsigned char multiplyBy2(unsigned char element);
 
 /*
     Generate Key Schedule.
@@ -171,7 +172,7 @@ void printResults(unsigned char array[4][4])
     {
         for (int y = 0; y < 4; y++)
         {
-            cout <<  int(array[y][x]);
+            cout << hex << setfill('0') << setw(2) <<  int(array[y][x]);
         }
     }
 }
@@ -203,6 +204,14 @@ void print3dArray(unsigned char array[4][4][11])
         }
         cout << "--------------------------------------------" << endl;
     }
+}
+
+unsigned char multiplyBy2(unsigned char element)
+{
+
+    unsigned char constant = ((element & 0x80) == 0x80) ? 0x1b : 0x00;
+    return (element << 1) ^ constant;
+
 }
 
 void keySchedule(unsigned char key[4][4], unsigned char roundKey[4][4][11])
@@ -433,6 +442,7 @@ void MixColumns(unsigned char cipherText[4][4])
             for (int j = 0; j < 4; j++)
             {
                 unsigned char constant = 0x00;
+                unsigned char element = 0x00;
                 switch (rijndaelMatric[z][j])
                 {
                 case 1:
@@ -440,17 +450,21 @@ void MixColumns(unsigned char cipherText[4][4])
                     break;
                 case 2:
                     // Check if highest bit is 1.
-                    if ((cipherText[j][y] & 0x80) == 0x80)
-                        constant = 0x1B;
+                    //if ((cipherText[j][y] & 0x80) == 0x80)
+                    //    constant = 0x1B;
 
-                    temp[j] = (cipherText[j][y] << 1) ^ constant;
+                    element = cipherText[j][y];
+                    temp[j] = multiplyBy2(element);
+                    //temp[j] = (cipherText[j][y] << 1) ^ constant;
                     break;
                 case 3:
                     // Check if highest bit is 1.
-                    if ((cipherText[j][y] & 0x80) == 0x80)
-                        constant = 0x1B;
+                    //if ((cipherText[j][y] & 0x80) == 0x80)
+                    //    constant = 0x1B;
 
-                    temp[j] = ((cipherText[j][y] << 1) ^ constant) ^ cipherText[j][y];
+                    element = cipherText[j][y];
+                    temp[j] = multiplyBy2(element) ^ element;
+                    //temp[j] = ((cipherText[j][y] << 1) ^ constant) ^ cipherText[j][y];
                     break;
                 }
 
@@ -615,35 +629,44 @@ void InvMixColumns(unsigned char plainText[4][4])
             for (int j = 0; j < 4; j++)
             {
                 unsigned char constant = 0x00;
+                unsigned char element = 0x00;
                 switch (rijndaelMatric[z][j])
                 {
                 case 9:
                     // Check if highest bit is 1.
-                    if ((plainText[j][y] & 0x80) == 0x80)
-                        constant = 0x1B;
+                    //if ((plainText[j][y] & 0x80) == 0x80)
+                    //    constant = 0x1B;
 
-                    temp[j] = ((((((plainText[j][y] << 1) ^ constant) << 1) ^ constant) << 1) ^ constant) ^ plainText[j][y];
+                    element = plainText[j][y];
+                    temp[j] = (multiplyBy2(multiplyBy2(multiplyBy2(element)))) ^ element;
+                    //temp[j] = ((((((plainText[j][y] << 1) ^ constant) << 1) ^ constant) << 1) ^ constant) ^ plainText[j][y];
                     break;
                 case 11:
                     // Check if highest bit is 1.
-                    if ((plainText[j][y] & 0x80) == 0x80)
-                        constant = 0x1B;
+                    //if ((plainText[j][y] & 0x80) == 0x80)
+                    //    constant = 0x1B;
 
-                    temp[j] = (((((((plainText[j][y] << 1) ^ constant) << 1) ^ constant) ^ plainText[j][y]) << 1) ^ constant) ^ plainText[j][y];
+                    element = plainText[j][y];
+                    temp[j] = (multiplyBy2(multiplyBy2(multiplyBy2(element)) ^ element)) ^ element;
+                    //temp[j] = (((((((plainText[j][y] << 1) ^ constant) << 1) ^ constant) ^ plainText[j][y]) << 1) ^ constant) ^ plainText[j][y];
                     break;
                 case 13:
                     // Check if highest bit is 1.
-                    if ((plainText[j][y] & 0x80) == 0x80)
-                        constant = 0x1B;
+                    //if ((plainText[j][y] & 0x80) == 0x80)
+                    //    constant = 0x1B;
 
-                    temp[j] = (((((((plainText[j][y] << 1) ^ constant) ^ plainText[j][y]) << 1) ^ constant) << 1) ^ constant) ^ plainText[j][y];
+                    element = plainText[j][y];
+                    temp[j] = multiplyBy2(multiplyBy2(multiplyBy2(element) ^ element)) ^ element;
+                    //temp[j] = (((((((plainText[j][y] << 1) ^ constant) ^ plainText[j][y]) << 1) ^ constant) << 1) ^ constant) ^ plainText[j][y];
                     break;
                 case 14:
                     // Check if highest bit is 1.
-                    if ((plainText[j][y] & 0x80) == 0x80)
-                        constant = 0x1B;
+                    //if ((plainText[j][y] & 0x80) == 0x80)
+                    //    constant = 0x1B;
 
-                    temp[j] = (((((((plainText[j][y] << 1) ^ constant) ^ plainText[j][y]) << 1) ^ constant) ^ plainText[j][y]) << 1) ^ constant;
+                    element = plainText[j][y];
+                    temp[j] = multiplyBy2((multiplyBy2(multiplyBy2(element) ^ element)) ^ element);
+                    //temp[j] = (((((((plainText[j][y] << 1) ^ constant) ^ plainText[j][y]) << 1) ^ constant) ^ plainText[j][y]) << 1) ^ constant;
                     break;
                 }
 
